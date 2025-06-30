@@ -2,12 +2,13 @@ use binrw::BinReaderExt;
 use chroma_dbg::ChromaDebug;
 use cil::header::CliHeader;
 use cil::meta::PhysicalMetadata;
+use cil::opcodes::Opcode;
 use cil::strings::StringHeap;
-use cil::tables;
+use cil::tables::{self, Method};
 use object::pe::{IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR, ImageNtHeaders32, ImageNtHeaders64};
 use object::read::pe::PeFile;
 use object::{LittleEndian, Object, ObjectComdat, ObjectSection, ObjectSymbol};
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{BufReader, Cursor, Read, Seek, SeekFrom};
 
 fn main() {
     let file = std::env::args().nth(1).expect("No file provided");
@@ -32,8 +33,9 @@ fn main() {
     c.seek(SeekFrom::Start(cli_header_offset as u64)).unwrap();
     let cli_header: CliHeader = c.read_le().unwrap();
     println!("CLI Header: {:#?}", cli_header);
+    println!("Code base: 0x{:X}", code_base);
     println!(
-        "CLI physical metadata offset: {:#x}",
+        "CLI physical metadata offset: 0x{:X}",
         cli_header.physical_metadata.rva - code_base
     );
     let metadata_offset = cli_header.physical_metadata.rva as u64 - code_base as u64;
@@ -126,7 +128,9 @@ fn main() {
                                     let method: tables::Method = stream
                                         .read_le_args((&string_heap,))
                                         .expect("Failed to read Method table");
-                                    println!("{}", method.dbg_chroma());
+                                    // println!("{}", method.dbg_chroma());
+                                    parse_cil_method(&method, code_base as u64, &mut c)
+                                        .expect("Failed to parse CIL method");
                                 }
                                 0x08 => {
                                     let param: tables::Param = stream
@@ -139,6 +143,7 @@ fn main() {
                                     break 'tables;
                                 }
                                 0x0A => {
+                                    break 'tables;
                                     let member_ref: tables::MemberRef = stream
                                         .read_le_args((&string_heap,))
                                         .expect("Failed to read MemberRef table");
@@ -306,4 +311,35 @@ fn main() {
     //         println!("No data available for this section.");
     //     }
     // }
+}
+
+fn parse_cil_method(
+    def: &Method,
+    code_base: u64,
+    code: &mut Cursor<&[u8]>,
+) -> binrw::BinResult<()> {
+    code.set_position(def.rva as u64 - code_base);
+
+    println!("\n.method {}()\n{{", def.name);
+
+    let header: u8 = code.read_le()?;
+    let is_fat = header & 0x3 == 3;
+    if is_fat {
+        println!("  Fat headers are not supported yet");
+    } else {
+        let size = header >> 2;
+        let mut data = vec![0u8; size as usize];
+        code.read_exact(&mut data)?;
+        println!("  Method Data: {:02X?}", data);
+
+        let mut cil_cursor = Cursor::new(data);
+        while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
+            let pos = cil_cursor.position();
+            let opcode: Opcode = cil_cursor.read_le()?;
+            println!("  IL_{pos:04x}: {opcode:X?}");
+        }
+    }
+
+    println!("}}");
+    Ok(())
 }
