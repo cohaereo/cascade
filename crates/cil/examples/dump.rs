@@ -78,6 +78,21 @@ fn main() {
         guids
     };
 
+    let userstring_heap = {
+        let userstring_stream = physical_metadata
+            .streams
+            .iter()
+            .find(|s| s.name == "#US")
+            .expect("No #US stream found");
+        let mut userstring_data = vec![0u8; userstring_stream.size as usize];
+        c.seek(SeekFrom::Start(
+            userstring_stream.offset as u64 + metadata_offset,
+        ))
+        .unwrap();
+        c.read_exact(&mut userstring_data).unwrap();
+        cil::strings::UserStringHeap::new(userstring_data)
+    };
+
     for s in physical_metadata.streams {
         println!("Stream: {:X?}", s);
         let mut stream_data = vec![0u8; s.size as usize];
@@ -129,8 +144,13 @@ fn main() {
                                         .read_le_args((&string_heap,))
                                         .expect("Failed to read Method table");
                                     // println!("{}", method.dbg_chroma());
-                                    parse_cil_method(&method, code_base as u64, &mut c)
-                                        .expect("Failed to parse CIL method");
+                                    parse_cil_method(
+                                        &method,
+                                        code_base as u64,
+                                        &mut c,
+                                        &userstring_heap,
+                                    )
+                                    .expect("Failed to parse CIL method");
                                 }
                                 0x08 => {
                                     let param: tables::Param = stream
@@ -293,6 +313,7 @@ fn main() {
                     i += 1;
                 }
             }
+            "#US" => {}
             u => {
                 println!("Unhandled stream: {:?}", u);
             }
@@ -316,6 +337,7 @@ fn parse_cil_method(
     def: &Method,
     code_base: u64,
     code: &mut Cursor<&[u8]>,
+    userstrings: &cil::strings::UserStringHeap,
 ) -> binrw::BinResult<()> {
     if def.flags.is_abstract() {
         println!("\n.method abstract {}()\n{{}}", def.name);
@@ -335,12 +357,12 @@ fn parse_cil_method(
     let header = if is_fat {
         code.set_position(header_start);
         let b: u16 = code.read_le()?;
-        let flags = b & 0xFFF;
+        let _flags = b & 0xFFF;
         let size = b >> 12;
 
         let max_stack: u16 = code.read_le()?;
         let code_size: u32 = code.read_le()?;
-        let local_var_sig_token: Token = code.read_le()?;
+        let _local_var_sig_token: Token = code.read_le()?;
 
         code.set_position(header_start + (size * 4) as u64);
 
@@ -365,7 +387,15 @@ fn parse_cil_method(
     while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
         let pos = cil_cursor.position();
         let opcode: Opcode = cil_cursor.read_le()?;
-        println!("  IL_{pos:04x}: {opcode}");
+        print!("  IL_{pos:04x}: {opcode}");
+        if let Opcode::LdStr { string } = opcode {
+            if let Some(s) = userstrings.get(string) {
+                print!(" \"{s}\"");
+            } else {
+                print!(" <invalid string>");
+            }
+        }
+        println!();
     }
 
     println!("}}");
