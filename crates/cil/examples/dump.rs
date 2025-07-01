@@ -317,6 +317,11 @@ fn parse_cil_method(
     code_base: u64,
     code: &mut Cursor<&[u8]>,
 ) -> binrw::BinResult<()> {
+    if def.flags.is_abstract() {
+        println!("\n.method abstract {}()\n{{}}", def.name);
+        return Ok(());
+    }
+
     let header_start = def.rva as u64 - code_base;
     code.set_position(header_start);
 
@@ -356,7 +361,6 @@ fn parse_cil_method(
     let mut data = vec![0u8; header.code_size as usize];
     code.read_exact(&mut data)?;
 
-    println!("  Data: {:02X?}", data);
     let mut cil_cursor = Cursor::new(data);
     while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
         let pos = cil_cursor.position();
