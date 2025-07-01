@@ -1,7 +1,7 @@
 use binrw::BinReaderExt;
 use chroma_dbg::ChromaDebug;
 use cil::header::CliHeader;
-use cil::meta::PhysicalMetadata;
+use cil::meta::{PhysicalMetadata, Token};
 use cil::opcodes::Opcode;
 use cil::strings::StringHeap;
 use cil::tables::{self, Method};
@@ -143,7 +143,6 @@ fn main() {
                                     break 'tables;
                                 }
                                 0x0A => {
-                                    break 'tables;
                                     let member_ref: tables::MemberRef = stream
                                         .read_le_args((&string_heap,))
                                         .expect("Failed to read MemberRef table");
@@ -318,26 +317,51 @@ fn parse_cil_method(
     code_base: u64,
     code: &mut Cursor<&[u8]>,
 ) -> binrw::BinResult<()> {
-    code.set_position(def.rva as u64 - code_base);
-
-    println!("\n.method {}()\n{{", def.name);
+    let header_start = def.rva as u64 - code_base;
+    code.set_position(header_start);
 
     let header: u8 = code.read_le()?;
     let is_fat = header & 0x3 == 3;
-    if is_fat {
-        println!("  Fat headers are not supported yet");
+    struct MethodHeader {
+        max_stack: u16,
+        code_size: u32,
+    }
+
+    let header = if is_fat {
+        code.set_position(header_start);
+        let b: u16 = code.read_le()?;
+        let flags = b & 0xFFF;
+        let size = b >> 12;
+
+        let max_stack: u16 = code.read_le()?;
+        let code_size: u32 = code.read_le()?;
+        let local_var_sig_token: Token = code.read_le()?;
+
+        code.set_position(header_start + (size * 4) as u64);
+
+        MethodHeader {
+            max_stack,
+            code_size,
+        }
     } else {
         let size = header >> 2;
-        let mut data = vec![0u8; size as usize];
-        code.read_exact(&mut data)?;
-        println!("  Method Data: {:02X?}", data);
-
-        let mut cil_cursor = Cursor::new(data);
-        while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
-            let pos = cil_cursor.position();
-            let opcode: Opcode = cil_cursor.read_le()?;
-            println!("  IL_{pos:04x}: {opcode:X?}");
+        MethodHeader {
+            code_size: size as u32,
+            max_stack: 8,
         }
+    };
+
+    println!("\n.method {}()\n{{", def.name);
+    println!("  .maxstack {}", header.max_stack);
+    let mut data = vec![0u8; header.code_size as usize];
+    code.read_exact(&mut data)?;
+
+    println!("  Data: {:02X?}", data);
+    let mut cil_cursor = Cursor::new(data);
+    while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
+        let pos = cil_cursor.position();
+        let opcode: Opcode = cil_cursor.read_le()?;
+        println!("  IL_{pos:04x}: {opcode}");
     }
 
     println!("}}");
