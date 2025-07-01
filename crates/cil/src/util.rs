@@ -1,4 +1,4 @@
-/// ```
+/// ```text
 /// bitfield! {
 /// struct MyFlags : u32 {
 ///     is_active: bool @ 0x01,
