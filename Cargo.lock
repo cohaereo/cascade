@@ -92,6 +92,7 @@ dependencies = [
  "chroma-dbg",
  "int-enum",
  "object",
+ "thiserror",
 ]
 
 [[package]]

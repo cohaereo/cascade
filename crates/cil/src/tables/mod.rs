@@ -119,3 +119,125 @@ pub enum ClassSemantics {
 pub struct StandAloneSig {
     pub signature_blob_index: u16,
 }
+
+#[binread]
+#[derive(Debug)]
+pub struct InterfaceImpl {
+    pub class: u16,
+    pub interface: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct Constant {
+    pub kind: u8,
+    #[br(temp)]
+    _pad1: u8,
+    pub parent: u16,
+    pub value_blob_index: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct DeclSecurity {
+    pub action: u16,
+    pub parent: u16,
+    pub permission_set_blob_index: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct ClassLayout {
+    pub packing_size: u16,
+    pub class_size: u32,
+    pub parent: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct FieldLayout {
+    pub offset: u32,
+    pub field: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct PropertyMap {
+    pub parent: u16,
+    pub property_list: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+#[br(import(strings: &StringHeap))]
+pub struct Property {
+    pub flags: u16,
+    #[br(try_map = |s: StringIndex| strings.try_get(s))]
+    pub name: String,
+    pub type_blob_index: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct MethodSemantics {
+    pub semantics: u16,
+    pub method: u16,
+    pub association: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct MethodImpl {
+    pub class: u16,
+    pub method_body: u16,
+    pub method_declaration: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct TypeSpec {
+    pub signature_blob_index: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+#[br(import(strings: &StringHeap))]
+pub struct ImplMap {
+    pub mapping_flags: u16,
+    pub member_forwarded: u16,
+    #[br(try_map = |s: StringIndex| strings.try_get(s))]
+    pub import_name: String,
+    pub import_scope: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct NestedClass {
+    pub nested_class: u16,
+    pub enclosing_class: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+#[br(import(strings: &StringHeap))]
+pub struct GenericParam {
+    pub number: u16,
+    pub flags: u16,
+    pub owner: u16,
+    #[br(try_map = |s: StringIndex| strings.try_get(s))]
+    pub name: String,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct MethodSpec {
+    pub method: u16,
+    pub instantiation_blob_index: u16,
+}
+
+#[binread]
+#[derive(Debug)]
+pub struct GenericParamConstraint {
+    pub owner: u16,
+    pub constraint: u16,
+}

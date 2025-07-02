@@ -12,6 +12,7 @@ object = { version = "0.37.1", default-features = false, features = [
     "read",
     "std",
 ] }
+thiserror = "2.0.12"
 
 [dev-dependencies]
 chroma-dbg = "0.1.1"

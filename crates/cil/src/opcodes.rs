@@ -528,13 +528,15 @@ define_opcodes! {
     /// Subsequent call terminates current method.
     0xFE_14 => Tail() "tail.",
     /// Initialize the value at address dest.
-    0xFE_15 => InitObj(type_tok: Token) "initobj",
+    0xFE_15 => InitObj(type_token: Token) "initobj",
     /// Call a virtual method on a type constrained to be type T.
     0xFE_16 => Constrained(this_type: Token) "constrained.",
     /// Copy data from memory to memory.
     0xFE_17 => CpBlk() "cpblk",
     /// Set all bytes in a block of memory to a given byte value.
-    0xFE_18 => InitBlk() "initblk"
+    0xFE_18 => InitBlk() "initblk",
+    /// Push the size, in bytes, of a type as an unsigned int32.
+    0xFE_1C => SizeOf(type_token: Token) "sizeof"
 }
 
 bitflags! {

@@ -36,24 +36,18 @@ impl StringHeap {
     }
 }
 
-pub struct UserStringHeap {
+pub struct BlobHeap {
     data: Vec<u8>,
 }
 
-impl UserStringHeap {
+impl BlobHeap {
     pub fn new(data: Vec<u8>) -> Self {
-        UserStringHeap { data }
+        BlobHeap { data }
     }
 
-    pub fn get(&self, token: Token) -> Option<String> {
-        assert_eq!(
-            token.kind(),
-            TokenKind::UserString,
-            "Token is not a UserString"
-        );
-
-        let mut offset = token.index() as usize;
+    pub fn get(&self, index: u32) -> Option<&[u8]> {
         let mut len = 0;
+        let mut offset = index as usize;
         // Varint encoding
         // For unsigned integers:
         //   - If the value lies between 0 (0x00) and 127 (0x7F), inclusive, encode as a one-byte integer (bit 7 is clear, value held in bits 6 through 0)
@@ -81,12 +75,38 @@ impl UserStringHeap {
             offset += 4;
         }
 
-        let mut values: Vec<u16> = Vec::new();
         let end = offset + len;
-        while (offset + 1) < end && offset + 1 < self.data.len() {
-            let value = u16::from_le_bytes([self.data[offset], self.data[offset + 1]]);
+        self.data.get(offset..end)
+    }
+}
+
+pub struct UserStringHeap {
+    blob: BlobHeap,
+}
+
+impl UserStringHeap {
+    pub fn new(data: Vec<u8>) -> Self {
+        UserStringHeap {
+            blob: BlobHeap::new(data),
+        }
+    }
+
+    pub fn get(&self, token: Token) -> Option<String> {
+        assert_eq!(
+            token.kind(),
+            TokenKind::UserString,
+            "Token is not a UserString"
+        );
+
+        let data = self.blob.get(token.index())?;
+
+        let mut values: Vec<u16> = Vec::new();
+        for i in (0..data.len()).step_by(2) {
+            if i + 1 >= data.len() {
+                break;
+            }
+            let value = u16::from_le_bytes([data[i], data[i + 1]]);
             values.push(value);
-            offset += 2;
         }
 
         Some(String::from_utf16(&values).ok()?)
