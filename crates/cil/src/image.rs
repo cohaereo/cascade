@@ -11,7 +11,7 @@ use crate::{
     error::Error,
     meta::{Guid, PhysicalMetadata, Token},
     opcodes::Opcode,
-    tables,
+    tables::{self},
 };
 use crate::{
     header::CliHeader,
@@ -32,7 +32,7 @@ pub struct CilImage {
     pub type_refs: Vec<tables::TypeRef>,
     pub type_defs: Vec<tables::TypeDef>,
     pub fields: Vec<tables::Field>,
-    pub methods: Vec<(tables::Method, Vec<(u32, Opcode)>)>,
+    pub methods: Vec<(tables::Method, MethodHeader, Vec<(u32, Opcode)>)>,
     pub params: Vec<tables::Param>,
     pub member_refs: Vec<tables::MemberRef>,
     pub custom_attributes: Vec<tables::CustomAttribute>,
@@ -226,10 +226,11 @@ impl CilImage {
                             let method: tables::Method = meta_stream
                                 .read_le_args((&r.strings,))
                                 .expect("Failed to read Method table");
-                            let opcodes = parse_cil_bytecode(&method, r.code_base as u64, &mut c)?;
+                            let (header, opcodes) =
+                                parse_cil_bytecode(&method, r.code_base as u64, &mut c)?;
                             // parse_cil_method(&method, code_base as u64, &mut c, &userstring_heap)
                             //     .expect("Failed to parse CIL method");
-                            r.methods.push((method, opcodes));
+                            r.methods.push((method, header, opcodes));
                         }
                         0x08 => {
                             let param: tables::Param = meta_stream
@@ -405,14 +406,27 @@ impl CilImage {
     }
 }
 
+pub struct MethodHeader {
+    pub max_stack: u16,
+    pub code_size: u32,
+    pub local_var_sig_token: Option<Token>,
+}
+
 fn parse_cil_bytecode(
     def: &tables::Method,
     code_base: u64,
     code: &mut Cursor<&[u8]>,
-) -> Result<Vec<(u32, Opcode)>> {
+) -> Result<(MethodHeader, Vec<(u32, Opcode)>)> {
     if def.flags.is_abstract() {
         println!(".method abstract {}() {{}}", def.name);
-        return Ok(vec![]);
+        return Ok((
+            MethodHeader {
+                max_stack: 0,
+                code_size: 0,
+                local_var_sig_token: None,
+            },
+            Vec::new(),
+        ));
     }
 
     let header_start = def.rva as u64 - code_base;
@@ -420,11 +434,6 @@ fn parse_cil_bytecode(
 
     let header: u8 = code.read_le()?;
     let is_fat = header & 0x3 == 3;
-    struct MethodHeader {
-        max_stack: u16,
-        code_size: u32,
-        local_var_sig_token: Option<Token>,
-    }
 
     let header = if is_fat {
         code.set_position(header_start);
@@ -463,5 +472,5 @@ fn parse_cil_bytecode(
         opcodes.push((offset, opcode));
     }
 
-    Ok(opcodes)
+    Ok((header, opcodes))
 }
