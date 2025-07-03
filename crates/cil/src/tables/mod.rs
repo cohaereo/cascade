@@ -14,13 +14,15 @@ pub use param::*;
 
 use std::fmt::Debug;
 
-use binrw::binread;
+use binrw::{BinRead, BinReaderExt, binread};
 use int_enum::IntEnum;
 
 use crate::{
     bitfield,
+    image::CilImage,
     meta::{GuidIndex, StringIndex},
     strings::StringHeap,
+    util::PackedU32,
 };
 
 #[binread]
@@ -240,4 +242,56 @@ pub struct MethodSpec {
 pub struct GenericParamConstraint {
     pub owner: u16,
     pub constraint: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TypeDefOrRef {
+    TypeDef(u32),
+    TypeRef(u32),
+    TypeSpec(u32),
+}
+
+impl TypeDefOrRef {
+    pub fn name_with_namespace(&self, image: &CilImage) -> Option<String> {
+        let s = match self {
+            TypeDefOrRef::TypeDef(index) => image
+                .type_defs
+                .get(*index as usize - 1)
+                .map(|td| format!("{}.{}", td.type_namespace, td.type_name)),
+            TypeDefOrRef::TypeRef(index) => image
+                .type_refs
+                .get(*index as usize - 1)
+                .map(|tr| format!("{}.{}", tr.namespace, tr.name)),
+            TypeDefOrRef::TypeSpec(_) => None,
+        };
+
+        if let Some(s) = s.clone()
+            && s.starts_with('.')
+        {
+            Some(s[1..].to_string())
+        } else {
+            s
+        }
+    }
+}
+
+impl BinRead for TypeDefOrRef {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        _endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let v: PackedU32 = reader.read_le()?;
+        let index = v.0 >> 2;
+        match v.0 & 0b11 {
+            0 => Ok(TypeDefOrRef::TypeDef(index)),
+            1 => Ok(TypeDefOrRef::TypeRef(index)),
+            2 => Ok(TypeDefOrRef::TypeSpec(index)),
+            _ => Err(binrw::Error::NoVariantMatch {
+                pos: reader.stream_position()?,
+            }),
+        }
+    }
 }

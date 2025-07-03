@@ -13,7 +13,7 @@ macro_rules! define_opcodes {
         #[derive(Debug, Clone, PartialEq)]
         #[rustfmt::skip]
         #[allow(non_camel_case_types)]
-        pub enum Opcode {
+        pub enum RawOpcode {
             $(
                 $(#[doc = $description])?
                 $name
@@ -27,16 +27,23 @@ macro_rules! define_opcodes {
             Switch { targets: Vec<i32> },
         }
 
-        impl Opcode {
+        impl RawOpcode {
             pub fn asm_name(&self) -> &'static str {
                 match self {
                     $(Self::$name { .. } => $asmname,)*
                     Self::Switch { .. } => "switch",
                 }
             }
+
+            pub fn size(&self) -> usize {
+                1 + match self {
+                    $(Self::$name { .. } => 0 $(+ std::mem::size_of::<$ftype>())*,)*
+                    Self::Switch { targets } => 4 + 4 * targets.len(),
+                }
+            }
         }
 
-        impl Display for Opcode {
+        impl Display for RawOpcode {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.asm_name())?;
 
@@ -62,7 +69,7 @@ macro_rules! define_opcodes {
             }
         }
 
-        impl binrw::BinRead for Opcode {
+        impl binrw::BinRead for RawOpcode {
             type Args<'a> = ();
 
             fn read_options<R: std::io::Read + std::io::Seek>(reader: &mut R, endian: binrw::Endian, args: Self::Args<'_>) -> binrw::BinResult<Self> {
@@ -537,6 +544,75 @@ define_opcodes! {
     0xFE_18 => InitBlk() "initblk",
     /// Push the size, in bytes, of a type as an unsigned int32.
     0xFE_1C => SizeOf(type_token: Token) "sizeof"
+}
+
+impl RawOpcode {
+    pub fn is_branch(&self) -> bool {
+        matches!(
+            self,
+            Self::Br { .. }
+                | Self::Br_False { .. }
+                | Self::Br_True { .. }
+                | Self::Beq { .. }
+                | Self::Bge { .. }
+                | Self::Bgt { .. }
+                | Self::Ble { .. }
+                | Self::Blt { .. }
+                | Self::Bne_Un { .. }
+                | Self::Bge_Un { .. }
+                | Self::Bgt_Un { .. }
+                | Self::Ble_Un { .. }
+                | Self::Blt_Un { .. }
+                | Self::Br_S { .. }
+                | Self::Br_False_S { .. }
+                | Self::Br_True_S { .. }
+                | Self::Beq_S { .. }
+                | Self::Bge_S { .. }
+                | Self::Bgt_S { .. }
+                | Self::Ble_S { .. }
+                | Self::Blt_S { .. }
+                | Self::Bne_Un_S { .. }
+                | Self::Bge_Un_S { .. }
+                | Self::Bgt_Un_S { .. }
+                | Self::Ble_Un_S { .. }
+                | Self::Blt_Un_S { .. }
+        )
+    }
+
+    /// If this opcode is a branch, returns the offset relative to the start of THIS instruction.
+    pub fn branch_offset(&self) -> Option<i32> {
+        Some(
+            match self {
+                Self::Br { offset } => *offset,
+                Self::Br_False { offset } => *offset,
+                Self::Br_True { offset } => *offset,
+                Self::Beq { offset } => *offset,
+                Self::Bge { offset } => *offset,
+                Self::Bgt { offset } => *offset,
+                Self::Ble { offset } => *offset,
+                Self::Blt { offset } => *offset,
+                Self::Bne_Un { offset } => *offset,
+                Self::Bge_Un { offset } => *offset,
+                Self::Bgt_Un { offset } => *offset,
+                Self::Ble_Un { offset } => *offset,
+                Self::Blt_Un { offset } => *offset,
+                Self::Br_S { offset } => i32::from(*offset),
+                Self::Br_False_S { offset } => i32::from(*offset),
+                Self::Br_True_S { offset } => i32::from(*offset),
+                Self::Beq_S { offset } => i32::from(*offset),
+                Self::Bge_S { offset } => i32::from(*offset),
+                Self::Bgt_S { offset } => i32::from(*offset),
+                Self::Ble_S { offset } => i32::from(*offset),
+                Self::Blt_S { offset } => i32::from(*offset),
+                Self::Bne_Un_S { offset } => i32::from(*offset),
+                Self::Bge_Un_S { offset } => i32::from(*offset),
+                Self::Bgt_Un_S { offset } => i32::from(*offset),
+                Self::Ble_Un_S { offset } => i32::from(*offset),
+                Self::Blt_Un_S { offset } => i32::from(*offset),
+                _ => return None, // Not a branch
+            } + self.size() as i32,
+        )
+    }
 }
 
 bitflags! {

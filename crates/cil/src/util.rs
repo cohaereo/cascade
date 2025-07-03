@@ -1,10 +1,13 @@
 use std::io::Read;
 
+use binrw::BinRead;
+
 /// ```text
 /// bitfield! {
-/// struct MyFlags : u32 {
-///     is_active: bool @ 0x01,
-///     kind: KindEnum @ 0x06 >> 1,
+///     struct MyFlags : u32 {
+///         flag is_active: bool @ 0x01,
+///         enum kind: KindEnum @ 0x06 >> 1,
+///     }
 /// }
 /// ```
 #[macro_export]
@@ -43,7 +46,7 @@ macro_rules! bitfield {
             )*
         }
 
-        impl Debug for $name {
+        impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.debug_struct(stringify!($name))
                     $(
@@ -89,7 +92,7 @@ where
             result = first_byte as u32;
         } else if first_byte & 0xC0 == 0x80 {
             // Two-byte integer (128-16383)
-            let mut data = [0u8; 2];
+            let mut data = [0u8; 1];
             self.read_exact(&mut data)?;
             let second_byte = data[0];
             result = (((first_byte & 0x3F) as u32) << 8) | (second_byte as u32);
@@ -107,5 +110,21 @@ where
         }
 
         Ok(result)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PackedU32(pub u32);
+
+impl BinRead for PackedU32 {
+    type Args<'a> = ();
+
+    fn read_options<R: Read + std::io::Seek>(
+        reader: &mut R,
+        _endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> binrw::BinResult<Self> {
+        let value = reader.read_compressed_u32()?;
+        Ok(PackedU32(value))
     }
 }

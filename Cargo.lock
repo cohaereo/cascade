@@ -63,7 +63,9 @@ checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
 name = "cascade"
 version = "0.1.0"
 dependencies = [
+ "binrw",
  "cil",
+ "thiserror",
 ]
 
 [[package]]

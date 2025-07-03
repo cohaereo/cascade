@@ -44,3 +44,10 @@ pub enum MemberAccess {
     FamilyOrAssembly = 5,
     Public = 6,
 }
+
+#[binread]
+#[derive(Debug)]
+pub struct FieldRva {
+    pub rva: u32,
+    pub field_index: u16,
+}

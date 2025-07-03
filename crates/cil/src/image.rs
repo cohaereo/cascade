@@ -9,8 +9,9 @@ use object::{Object, ObjectSection, pe::IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR, re
 use crate::{
     Result,
     error::Error,
-    meta::{Guid, PhysicalMetadata, Token},
-    opcodes::Opcode,
+    meta::{Guid, PhysicalMetadata, Token, TokenKind},
+    opcodes::RawOpcode,
+    signature::StandaloneMethodSignature,
     tables::{self},
 };
 use crate::{
@@ -32,7 +33,7 @@ pub struct CilImage {
     pub type_refs: Vec<tables::TypeRef>,
     pub type_defs: Vec<tables::TypeDef>,
     pub fields: Vec<tables::Field>,
-    pub methods: Vec<(tables::Method, MethodHeader, Vec<(u32, Opcode)>)>,
+    pub method_defs: Vec<(tables::Method, MethodHeader, Vec<(u32, RawOpcode)>)>,
     pub params: Vec<tables::Param>,
     pub member_refs: Vec<tables::MemberRef>,
     pub custom_attributes: Vec<tables::CustomAttribute>,
@@ -54,6 +55,7 @@ pub struct CilImage {
     pub generic_params: Vec<tables::GenericParam>,
     pub method_specs: Vec<tables::MethodSpec>,
     pub generic_param_constraints: Vec<tables::GenericParamConstraint>,
+    pub field_rvas: Vec<tables::FieldRva>,
 }
 
 impl CilImage {
@@ -159,7 +161,7 @@ impl CilImage {
             type_refs: vec![],
             type_defs: vec![],
             fields: vec![],
-            methods: vec![],
+            method_defs: vec![],
             params: vec![],
             member_refs: vec![],
             custom_attributes: vec![],
@@ -181,6 +183,7 @@ impl CilImage {
             generic_params: vec![],
             method_specs: vec![],
             generic_param_constraints: vec![],
+            field_rvas: vec![],
         };
 
         let meta_streamheader = physical_metadata
@@ -230,7 +233,7 @@ impl CilImage {
                                 parse_cil_bytecode(&method, r.code_base as u64, &mut c)?;
                             // parse_cil_method(&method, code_base as u64, &mut c, &userstring_heap)
                             //     .expect("Failed to parse CIL method");
-                            r.methods.push((method, header, opcodes));
+                            r.method_defs.push((method, header, opcodes));
                         }
                         0x08 => {
                             let param: tables::Param = meta_stream
@@ -335,7 +338,10 @@ impl CilImage {
                             r.impl_maps.push(impl_map);
                         }
                         0x1D => {
-                            return Result::Err(Error::UnsupportedTable("FieldRVA"));
+                            let field_rva: tables::FieldRva = meta_stream
+                                .read_le()
+                                .expect("Failed to read FieldRVA table");
+                            r.field_rvas.push(field_rva);
                         }
                         0x20 => {
                             let assembly: tables::Assembly = meta_stream
@@ -404,6 +410,36 @@ impl CilImage {
 
         Ok(r)
     }
+
+    fn parse_method_signature(&self, index: u16) -> Result<Option<StandaloneMethodSignature>> {
+        let blob = self.blobs.get(index as u32).expect("Failed to get blob");
+        let mut reader = Cursor::new(blob);
+        Ok(Some(reader.read_le()?))
+    }
+
+    pub fn resolve_method(&self, token: Token) -> Option<(String, StandaloneMethodSignature)> {
+        match token.kind() {
+            TokenKind::MemberRef => {
+                let member_ref = self.member_refs.get(token.index() as usize - 1).unwrap();
+                let signature = self
+                    .parse_method_signature(member_ref.signature_blob_index)
+                    .expect("Failed to parse method signature")
+                    .unwrap_or_default();
+                Some((format!("{}", member_ref.name), signature))
+            }
+            TokenKind::MethodDef => {
+                let (method_def, _, _) = self.method_defs.get(token.index() as usize - 1).unwrap();
+                let signature = self
+                    .parse_method_signature(method_def.signature_blob_index)
+                    .expect("Failed to parse method signature")
+                    .unwrap_or_default();
+                Some((format!("{}", method_def.name), signature))
+            }
+            u => {
+                panic!("Invalid method token kind: {u:?}");
+            }
+        }
+    }
 }
 
 pub struct MethodHeader {
@@ -416,7 +452,7 @@ fn parse_cil_bytecode(
     def: &tables::Method,
     code_base: u64,
     code: &mut Cursor<&[u8]>,
-) -> Result<(MethodHeader, Vec<(u32, Opcode)>)> {
+) -> Result<(MethodHeader, Vec<(u32, RawOpcode)>)> {
     if def.flags.is_abstract() {
         println!(".method abstract {}() {{}}", def.name);
         return Ok((
@@ -468,7 +504,7 @@ fn parse_cil_bytecode(
     let mut cil_cursor = Cursor::new(data);
     while cil_cursor.position() < cil_cursor.get_ref().len() as u64 {
         let offset = cil_cursor.position() as u32;
-        let opcode: Opcode = cil_cursor.read_le()?;
+        let opcode: RawOpcode = cil_cursor.read_le()?;
         opcodes.push((offset, opcode));
     }
 

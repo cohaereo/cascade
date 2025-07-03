@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-binrw = "0.15.0"
+binrw.workspace = true
 bitflags = "2.9.1"
 int-enum = "1.2.0"
 object = { version = "0.37.1", default-features = false, features = [
