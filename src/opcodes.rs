@@ -2,7 +2,7 @@
 //!
 //! For example, opcode variants such as `ldarg.0`, `ldarg.1`, etc are represented as a single `LdArg(0)` and `LdArg(1)` respectively instead of having separate variants for each argument index.
 
-use cil::{meta::Token, opcodes::RawOpcode};
+use cil::{meta::Token, opcodes::RawOpcode, signature::Element};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Opcode {
@@ -24,6 +24,13 @@ pub enum Opcode {
         comparison: Comparison,
         unsigned: bool,
     },
+
+    // Bitwise
+    ShiftLeft,
+    ShiftRight,
+    And,
+    Or,
+    Xor,
 
     // Constants
     /// Load a user string onto the stack
@@ -53,6 +60,12 @@ pub enum Opcode {
     SetField {
         field: Token,
     },
+
+    // Conversions
+    ConvertToI1,
+    ConvertToI2,
+    ConvertToI4,
+    ConvertToI8,
 }
 
 impl From<RawOpcode> for Opcode {
@@ -61,7 +74,7 @@ impl From<RawOpcode> for Opcode {
             RawOpcode::Add {} => Opcode::Add(OverflowCheck::Off),
             RawOpcode::Add_Ovf {} => Opcode::Add(OverflowCheck::Signed),
             RawOpcode::Add_Ovf_Unsigned {} => Opcode::Add(OverflowCheck::Unsigned),
-            // RawOpcode::And {} => todo!(),
+            RawOpcode::And {} => Self::And,
             // RawOpcode::ArgList {} => todo!(),
             RawOpcode::Beq { offset } => Self::BranchConditional {
                 offset,
@@ -215,10 +228,10 @@ impl From<RawOpcode> for Opcode {
             },
             // RawOpcode::Constrained { this_type } => todo!(),
             // RawOpcode::Conv_I {} => todo!(),
-            // RawOpcode::Conv_I1 {} => todo!(),
-            // RawOpcode::Conv_I2 {} => todo!(),
-            // RawOpcode::Conv_I4 {} => todo!(),
-            // RawOpcode::Conv_I8 {} => todo!(),
+            RawOpcode::Conv_I1 {} => Self::ConvertToI1,
+            RawOpcode::Conv_I2 {} => Self::ConvertToI2,
+            RawOpcode::Conv_I4 {} => Self::ConvertToI4,
+            RawOpcode::Conv_I8 {} => Self::ConvertToI8,
             // RawOpcode::Conv_Ovf_I {} => todo!(),
             // RawOpcode::Conv_Ovf_I1 {} => todo!(),
             // RawOpcode::Conv_Ovf_I1_Unsigned {} => todo!(),
@@ -336,15 +349,15 @@ impl From<RawOpcode> for Opcode {
             // RawOpcode::NewObj { ctor } => todo!(),
             RawOpcode::Nop {} => Self::Nop,
             // RawOpcode::Not {} => todo!(),
-            // RawOpcode::Or {} => todo!(),
+            RawOpcode::Or {} => Self::Or,
             // RawOpcode::Pop {} => todo!(),
             // RawOpcode::RefAnyVal { class } => todo!(),
             RawOpcode::Rem {} => Self::Remainder { unsigned: false },
             RawOpcode::RemUnsigned {} => Self::Remainder { unsigned: true },
             RawOpcode::Ret {} => Self::Return,
             RawOpcode::SetFld { field } => Self::SetField { field },
-            // RawOpcode::Shl {} => todo!(),
-            // RawOpcode::Shr {} => todo!(),
+            RawOpcode::Shl {} => Self::ShiftLeft,
+            RawOpcode::Shr {} => Self::ShiftRight,
             // RawOpcode::ShrUnsigned {} => todo!(),
             // RawOpcode::SizeOf { type_token } => todo!(),
             // RawOpcode::StArg { index } => todo!(),
@@ -384,7 +397,7 @@ impl From<RawOpcode> for Opcode {
             // RawOpcode::Unbox { typeref } => todo!(),
             // RawOpcode::Unbox_Any { typeref } => todo!(),
             // RawOpcode::Volatile {} => todo!(),
-            // RawOpcode::Xor {} => todo!(),
+            RawOpcode::Xor {} => Self::Xor,
             u => unimplemented!("Opcode conversion not implemented for raw opcode {:?}", u),
         }
     }

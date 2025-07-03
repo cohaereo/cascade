@@ -4,7 +4,7 @@ use std::{fmt::Write as _, io::Cursor};
 
 use cil::{
     ReadExt,
-    image::CilImage,
+    image::{CilImage, TypeName},
     opcodes::RawOpcode,
     signature::{self, Element, SignatureKind, StandaloneMethodSignature},
 };
@@ -160,9 +160,14 @@ impl<'img> MethodDecompiler<'img> {
 
         let mut temp_index = 0;
 
+        let mut method_attributes = String::new();
+        if self.method.flags.is_static() {
+            method_attributes.push_str("static ");
+        }
+
         writeln!(
             &mut output,
-            "{} {}({}) {{",
+            "{method_attributes}{} {}({}) {{",
             self.signature.return_type.debug_print(self.image),
             self.method.name,
             self.signature
@@ -226,27 +231,27 @@ impl<'img> MethodDecompiler<'img> {
                 Opcode::Add(ovf) => {
                     let right = self.stack.pop()?;
                     let left = self.stack.pop()?;
-                    self.stack.push(format!("{} + {}", left, right));
+                    self.stack.push(format!("({} + {})", left, right));
                 }
                 Opcode::Subtract(ovf) => {
                     let right = self.stack.pop()?;
                     let left = self.stack.pop()?;
-                    self.stack.push(format!("{} - {}", left, right));
+                    self.stack.push(format!("({} - {})", left, right));
                 }
                 Opcode::Multiply(ovf) => {
                     let right = self.stack.pop()?;
                     let left = self.stack.pop()?;
-                    self.stack.push(format!("{} * {}", left, right));
+                    self.stack.push(format!("({} * {})", left, right));
                 }
                 Opcode::Divide { unsigned } => {
                     let right = self.stack.pop()?;
                     let left = self.stack.pop()?;
-                    self.stack.push(format!("{} / {}", left, right));
+                    self.stack.push(format!("({} / {})", left, right));
                 }
                 Opcode::Remainder { unsigned } => {
                     let right = self.stack.pop()?;
                     let left = self.stack.pop()?;
-                    self.stack.push(format!("{} % {}", left, right));
+                    self.stack.push(format!("({} % {})", left, right));
                 }
                 Opcode::Compare {
                     comparison,
@@ -264,7 +269,7 @@ impl<'img> MethodDecompiler<'img> {
                     }
                 }
                 Opcode::Call(t) => {
-                    let (path_cs, signature) = self.image.resolve_method(t).unwrap();
+                    let (typename, methodname, signature) = self.image.resolve_method(t).unwrap();
                     let mut parameters: Vec<String> =
                         Vec::with_capacity(signature.parameters.len());
 
@@ -272,11 +277,21 @@ impl<'img> MethodDecompiler<'img> {
                         parameters.push(self.stack.pop().unwrap());
                     }
 
+                    // Parameters are passed right-to-left
+                    parameters.reverse();
+                    if signature.header.has_this() {
+                        parameters.insert(0, self.stack.pop().unwrap());
+                    }
+
+                    let mut method_path = self.translate_method_path(&typename, &methodname);
+                    if method_path.starts_with("this::") {
+                        method_path = method_path.replace("this::", "");
+                    }
                     if signature.return_type == Element::Void {
                         write!(
                             &mut output,
                             "    {}({});",
-                            self.translate_method_path("UnknownType", &path_cs),
+                            method_path,
                             parameters.join(", ")
                         )?;
                     } else {
@@ -286,7 +301,7 @@ impl<'img> MethodDecompiler<'img> {
                             &mut output,
                             "    auto {} = {}({});",
                             result_temp,
-                            self.translate_method_path("UnknownType", &path_cs),
+                            method_path,
                             parameters.join(", ")
                         )?;
 
@@ -317,6 +332,47 @@ impl<'img> MethodDecompiler<'img> {
                         *op_offset as i32 + raw_opcode.size() as i32 + offset
                     )?;
                 }
+                Opcode::ConvertToI1 => {
+                    let top = self.stack.pop()?;
+                    self.stack.push(format!("static_cast<int8>({})", top));
+                }
+                Opcode::ConvertToI2 => {
+                    let top = self.stack.pop()?;
+                    self.stack.push(format!("static_cast<int16>({})", top));
+                }
+                Opcode::ConvertToI4 => {
+                    let top = self.stack.pop()?;
+                    self.stack.push(format!("static_cast<int32>({})", top));
+                }
+                Opcode::ConvertToI8 => {
+                    let top = self.stack.pop()?;
+                    self.stack.push(format!("static_cast<int64>({})", top));
+                }
+                Opcode::ShiftLeft => {
+                    let right = self.stack.pop()?;
+                    let left = self.stack.pop()?;
+                    self.stack.push(format!("({left} << {right})"));
+                }
+                Opcode::ShiftRight => {
+                    let right = self.stack.pop()?;
+                    let left = self.stack.pop()?;
+                    self.stack.push(format!("({left} >> {right})"));
+                }
+                Opcode::Or => {
+                    let right = self.stack.pop()?;
+                    let left = self.stack.pop()?;
+                    self.stack.push(format!("({left} | {right})"));
+                }
+                Opcode::Xor => {
+                    let right = self.stack.pop()?;
+                    let left = self.stack.pop()?;
+                    self.stack.push(format!("({left} ^ {right})"));
+                }
+                Opcode::And => {
+                    let right = self.stack.pop()?;
+                    let left = self.stack.pop()?;
+                    self.stack.push(format!("({left} & {right})"));
+                }
                 u => return Err(Error::UnimplementedOpcode(u)),
             }
         }
@@ -334,11 +390,11 @@ impl<'img> MethodDecompiler<'img> {
         format!("arg{index}")
     }
 
-    fn translate_method_path(&self, typename: &str, path_cs: &str) -> String {
+    fn translate_method_path(&self, typename: &TypeName, path_cs: &str) -> String {
         if path_cs.ends_with(".ctor") {
-            format!("{}::new", typename)
+            format!("{}::new", typename.path_cxx())
         } else {
-            format!("{}::{}", typename, path_cs.replace(".", "::"))
+            format!("{}::{}", typename.path_cxx(), path_cs.replace(".", "::"))
         }
     }
 }

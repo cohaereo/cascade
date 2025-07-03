@@ -19,7 +19,7 @@ use int_enum::IntEnum;
 
 use crate::{
     bitfield,
-    image::CilImage,
+    image::{CilImage, TypeName},
     meta::{GuidIndex, StringIndex},
     strings::StringHeap,
     util::PackedU32,
@@ -273,8 +273,38 @@ impl TypeDefOrRef {
             s
         }
     }
+
+    pub fn typename(&self, image: &CilImage) -> Option<TypeName> {
+        match self {
+            TypeDefOrRef::TypeDef(index) => {
+                image.type_defs.get(*index as usize - 1).map(|td| TypeName {
+                    namespace: td.type_namespace.clone(),
+                    name: td.type_name.clone(),
+                })
+            }
+            TypeDefOrRef::TypeRef(index) => {
+                image.type_refs.get(*index as usize - 1).map(|tr| TypeName {
+                    namespace: tr.namespace.clone(),
+                    name: tr.name.clone(),
+                })
+            }
+            TypeDefOrRef::TypeSpec(_) => None,
+        }
+    }
 }
 
+impl TryFrom<u32> for TypeDefOrRef {
+    type Error = ();
+    fn try_from(v: u32) -> Result<Self, Self::Error> {
+        let index = v >> 2;
+        match v & 0b11 {
+            0 => Ok(TypeDefOrRef::TypeDef(index)),
+            1 => Ok(TypeDefOrRef::TypeRef(index)),
+            2 => Ok(TypeDefOrRef::TypeSpec(index)),
+            _ => Err(()),
+        }
+    }
+}
 impl BinRead for TypeDefOrRef {
     type Args<'a> = ();
 
@@ -284,14 +314,61 @@ impl BinRead for TypeDefOrRef {
         _args: Self::Args<'_>,
     ) -> binrw::BinResult<Self> {
         let v: PackedU32 = reader.read_le()?;
-        let index = v.0 >> 2;
-        match v.0 & 0b11 {
-            0 => Ok(TypeDefOrRef::TypeDef(index)),
-            1 => Ok(TypeDefOrRef::TypeRef(index)),
-            2 => Ok(TypeDefOrRef::TypeSpec(index)),
-            _ => Err(binrw::Error::NoVariantMatch {
-                pos: reader.stream_position()?,
+        Self::try_from(v.0).map_err(|_| binrw::Error::NoVariantMatch {
+            pos: reader.stream_position().unwrap(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemberRefParent {
+    TypeDef(u32),
+    TypeRef(u32),
+    ModuleRef(u32),
+    MethodDef(u32),
+    TypeSpec(u32),
+}
+
+impl MemberRefParent {
+    pub fn typename(&self, image: &CilImage) -> Option<TypeName> {
+        match self {
+            Self::TypeDef(index) => image.type_defs.get(*index as usize - 1).map(|td| TypeName {
+                namespace: td.type_namespace.clone(),
+                name: td.type_name.clone(),
             }),
+            Self::TypeRef(index) => image.type_refs.get(*index as usize - 1).map(|tr| TypeName {
+                namespace: tr.namespace.clone(),
+                name: tr.name.clone(),
+            }),
+            Self::ModuleRef(index) => image.modules.get(*index as usize - 1).map(|mr| TypeName {
+                namespace: "".to_string(),
+                name: mr.name.clone(),
+            }),
+            Self::MethodDef(index) => {
+                image
+                    .method_defs
+                    .get(*index as usize - 1)
+                    .map(|md| TypeName {
+                        namespace: "".to_string(),
+                        name: md.0.name.clone(),
+                    })
+            }
+            Self::TypeSpec(_) => None,
+        }
+    }
+}
+
+impl TryFrom<u32> for MemberRefParent {
+    type Error = ();
+    fn try_from(v: u32) -> Result<Self, Self::Error> {
+        let index = v >> 3;
+        match v & 0b111 {
+            0 => Ok(Self::TypeDef(index)),
+            1 => Ok(Self::TypeRef(index)),
+            2 => Ok(Self::ModuleRef(index)),
+            3 => Ok(Self::MethodDef(index)),
+            4 => Ok(Self::TypeSpec(index)),
+            _ => Err(()),
         }
     }
 }

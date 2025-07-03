@@ -1,5 +1,6 @@
 use binrw::BinReaderExt;
 use std::{
+    fmt::Display,
     io::{Cursor, Read, Seek, SeekFrom},
     path::Path,
 };
@@ -12,12 +13,33 @@ use crate::{
     meta::{Guid, PhysicalMetadata, Token, TokenKind},
     opcodes::RawOpcode,
     signature::StandaloneMethodSignature,
-    tables::{self},
+    tables::{self, MemberRefParent, TypeDefOrRef, member},
 };
 use crate::{
     header::CliHeader,
     strings::{BlobHeap, StringHeap, UserStringHeap},
 };
+
+pub struct TypeName {
+    pub namespace: String,
+    pub name: String,
+}
+
+impl TypeName {
+    pub fn path_cxx(&self) -> String {
+        self.to_string().replace(".", "::")
+    }
+}
+
+impl Display for TypeName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.namespace.is_empty() {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "{}.{}", self.namespace, self.name)
+        }
+    }
+}
 
 pub struct CilImage {
     pub code_base: u32,
@@ -417,7 +439,15 @@ impl CilImage {
         Ok(Some(reader.read_le()?))
     }
 
-    pub fn resolve_method(&self, token: Token) -> Option<(String, StandaloneMethodSignature)> {
+    pub fn class_name(&self, index: u16) -> Result<Option<TypeName>> {
+        let tdr = MemberRefParent::try_from(index as u32).expect("Failed to get MemberRefParent");
+        Ok(tdr.typename(self))
+    }
+
+    pub fn resolve_method(
+        &self,
+        token: Token,
+    ) -> Option<(TypeName, String, StandaloneMethodSignature)> {
         match token.kind() {
             TokenKind::MemberRef => {
                 let member_ref = self.member_refs.get(token.index() as usize - 1).unwrap();
@@ -425,7 +455,8 @@ impl CilImage {
                     .parse_method_signature(member_ref.signature_blob_index)
                     .expect("Failed to parse method signature")
                     .unwrap_or_default();
-                Some((format!("{}", member_ref.name), signature))
+                let class_name = self.class_name(member_ref.class_index).unwrap().unwrap();
+                Some((class_name, member_ref.name.clone(), signature))
             }
             TokenKind::MethodDef => {
                 let (method_def, _, _) = self.method_defs.get(token.index() as usize - 1).unwrap();
@@ -433,7 +464,14 @@ impl CilImage {
                     .parse_method_signature(method_def.signature_blob_index)
                     .expect("Failed to parse method signature")
                     .unwrap_or_default();
-                Some((format!("{}", method_def.name), signature))
+                Some((
+                    TypeName {
+                        namespace: "".to_string(),
+                        name: "this".to_string(),
+                    },
+                    method_def.name.clone(),
+                    signature,
+                ))
             }
             u => {
                 panic!("Invalid method token kind: {u:?}");
