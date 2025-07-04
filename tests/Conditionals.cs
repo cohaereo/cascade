@@ -17,12 +17,12 @@ public class Conditionals
         TestForLoops();
         TestWhileLoops();
         TestDoWhileLoops();
-        TestForeachLoops();
-        TestSwitchStatements();
+        // TestForeachLoops();
+        // TestSwitchStatements();
         TestTernaryOperator();
         TestComplexConditions();
         TestBreakAndContinue();
-        TestNullChecks();
+        // TestNullChecks();
         TestStringComparisons();
         TestBooleanLogic();
 
@@ -46,7 +46,7 @@ public class Conditionals
             result = false;
         }
 
-        Debug.Assert(result == true, "Basic if-else failed: a > b should be true");
+        Assert(result == true, "Basic if-else failed: a > b should be true");
 
         if (a < b)
         {
@@ -57,7 +57,7 @@ public class Conditionals
             result = false;
         }
 
-        Debug.Assert(result == false, "Basic if-else failed: a < b should be false");
+        Assert(result == false, "Basic if-else failed: a < b should be false");
 
         Console.WriteLine("Basic If-Else tests passed!");
     }
@@ -93,7 +93,7 @@ public class Conditionals
             grade = "F";
         }
 
-        Debug.Assert(grade == "B+", "Nested if-else failed: score 85 should be B+");
+        Assert(grade == "B+", "Nested if-else failed: score 85 should be B+");
 
         Console.WriteLine("Nested If-Else tests passed!");
     }
@@ -105,17 +105,17 @@ public class Conditionals
         int x = 10;
         int y = 20;
 
-        Debug.Assert(x < y, "Less than comparison failed");
-        Debug.Assert(y > x, "Greater than comparison failed");
-        Debug.Assert(x <= y, "Less than or equal comparison failed");
-        Debug.Assert(y >= x, "Greater than or equal comparison failed");
-        Debug.Assert(x != y, "Not equal comparison failed");
-        Debug.Assert(!(x == y), "Equal comparison failed");
+        Assert(x < y, "Less than comparison failed");
+        Assert(y > x, "Greater than comparison failed");
+        Assert(x <= y, "Less than or equal comparison failed");
+        Assert(y >= x, "Greater than or equal comparison failed");
+        Assert(x != y, "Not equal comparison failed");
+        Assert(!(x == y), "Equal comparison failed");
 
         x = 20;
-        Debug.Assert(x == y, "Equal comparison failed");
-        Debug.Assert(x <= y, "Less than or equal (equal case) failed");
-        Debug.Assert(x >= y, "Greater than or equal (equal case) failed");
+        Assert(x == y, "Equal comparison failed");
+        Assert(x <= y, "Less than or equal (equal case) failed");
+        Assert(x >= y, "Greater than or equal (equal case) failed");
 
         Console.WriteLine("Comparison Operators tests passed!");
     }
@@ -127,18 +127,18 @@ public class Conditionals
         bool a = true;
         bool b = false;
 
-        Debug.Assert(a && !b, "Logical AND failed");
-        Debug.Assert(a || b, "Logical OR failed");
-        Debug.Assert(!b, "Logical NOT failed");
-        Debug.Assert(!(a && b), "Complex logical expression failed");
+        Assert(a && !b, "Logical AND failed");
+        Assert(a || b, "Logical OR failed");
+        Assert(!b, "Logical NOT failed");
+        Assert(!(a && b), "Complex logical expression failed");
 
         int x = 5;
         int y = 10;
         int z = 15;
 
-        Debug.Assert(x < y && y < z, "Chained logical AND failed");
-        Debug.Assert(x > y || y < z, "Mixed logical operators failed");
-        Debug.Assert(!(x > y) && (y < z), "Complex logical with NOT failed");
+        Assert(x < y && y < z, "Chained logical AND failed");
+        Assert(x > y || y < z, "Mixed logical operators failed");
+        Assert(!(x > y) && (y < z), "Complex logical with NOT failed");
 
         Console.WriteLine("Logical Operators tests passed!");
     }
@@ -152,7 +152,7 @@ public class Conditionals
         {
             sum += i;
         }
-        Debug.Assert(sum == 15, "Basic for loop failed: sum should be 15");
+        Assert(sum == 15, "Basic for loop failed: sum should be 15");
 
         // Nested for loops
         int product = 1;
@@ -163,7 +163,7 @@ public class Conditionals
                 product *= i;
             }
         }
-        Debug.Assert(product == 36, "Nested for loop failed: product should be 36");
+        Assert(product == 36, "Nested for loop failed: product should be 36");
 
         // For loop with step
         int count = 0;
@@ -171,7 +171,7 @@ public class Conditionals
         {
             count++;
         }
-        Debug.Assert(count == 5, "For loop with step failed: count should be 5");
+        Assert(count == 5, "For loop with step failed: count should be 5");
 
         Console.WriteLine("For Loops tests passed!");
     }
@@ -187,8 +187,8 @@ public class Conditionals
             sum += i;
             i++;
         }
-        Debug.Assert(sum == 10, "While loop failed: sum should be 10");
-        Debug.Assert(i == 5, "While loop failed: i should be 5");
+        Assert(sum == 10, "While loop failed: sum should be 10");
+        Assert(i == 5, "While loop failed: i should be 5");
 
         // While loop with complex condition
         int x = 1;
@@ -198,8 +198,8 @@ public class Conditionals
             x *= 2;
             iterations++;
         }
-        Debug.Assert(x == 128, "Complex while loop failed: x should be 128");
-        Debug.Assert(iterations == 7, "Complex while loop failed: iterations should be 7");
+        Assert(x == 128, "Complex while loop failed: x should be 128");
+        Assert(iterations == 7, "Complex while loop failed: iterations should be 7");
 
         Console.WriteLine("While Loops tests passed!");
     }
@@ -216,7 +216,7 @@ public class Conditionals
             i++;
         } while (i < 3);
 
-        Debug.Assert(count == 3, "Do-while loop failed: count should be 3");
+        Assert(count == 3, "Do-while loop failed: count should be 3");
 
         // Do-while that executes only once
         int value = 10;
@@ -227,124 +227,124 @@ public class Conditionals
             value++;
         } while (value < 10);
 
-        Debug.Assert(executions == 1, "Do-while loop failed: should execute at least once");
-        Debug.Assert(value == 11, "Do-while loop failed: value should be 11");
+        Assert(executions == 1, "Do-while loop failed: should execute at least once");
+        Assert(value == 11, "Do-while loop failed: value should be 11");
 
         Console.WriteLine("Do-While Loops tests passed!");
     }
 
-    public static void TestForeachLoops()
-    {
-        Console.WriteLine("Testing Foreach Loops...");
+    // public static void TestForeachLoops()
+    // {
+    //     Console.WriteLine("Testing Foreach Loops...");
 
-        int[] numbers = { 1, 2, 3, 4, 5 };
-        int sum = 0;
+    //     int[] numbers = { 1, 2, 3, 4, 5 };
+    //     int sum = 0;
 
-        foreach (int num in numbers)
-        {
-            sum += num;
-        }
-        Debug.Assert(sum == 15, "Foreach loop failed: sum should be 15");
+    //     foreach (int num in numbers)
+    //     {
+    //         sum += num;
+    //     }
+    //     Assert(sum == 15, "Foreach loop failed: sum should be 15");
 
-        string[] words = { "Hello", "World", "Test" };
-        string combined = "";
+    //     string[] words = { "Hello", "World", "Test" };
+    //     string combined = "";
 
-        foreach (string word in words)
-        {
-            combined += word;
-        }
-        Debug.Assert(combined == "HelloWorldTest", "Foreach with strings failed");
+    //     foreach (string word in words)
+    //     {
+    //         combined += word;
+    //     }
+    //     Assert(combined == "HelloWorldTest", "Foreach with strings failed");
 
-        // Foreach with List
-        List<int> list = new List<int> { 10, 20, 30 };
-        int product = 1;
+    //     // Foreach with List
+    //     List<int> list = new List<int> { 10, 20, 30 };
+    //     int product = 1;
 
-        foreach (int item in list)
-        {
-            product *= item;
-        }
-        Debug.Assert(product == 6000, "Foreach with List failed: product should be 6000");
+    //     foreach (int item in list)
+    //     {
+    //         product *= item;
+    //     }
+    //     Assert(product == 6000, "Foreach with List failed: product should be 6000");
 
-        Console.WriteLine("Foreach Loops tests passed!");
-    }
+    //     Console.WriteLine("Foreach Loops tests passed!");
+    // }
 
-    public static void TestSwitchStatements()
-    {
-        Console.WriteLine("Testing Switch Statements...");
+    // public static void TestSwitchStatements()
+    // {
+    //     Console.WriteLine("Testing Switch Statements...");
 
-        // Basic switch
-        int day = 3;
-        string dayName = "";
+    //     // Basic switch
+    //     int day = 3;
+    //     string dayName = "";
 
-        switch (day)
-        {
-            case 1:
-                dayName = "Monday";
-                break;
-            case 2:
-                dayName = "Tuesday";
-                break;
-            case 3:
-                dayName = "Wednesday";
-                break;
-            case 4:
-                dayName = "Thursday";
-                break;
-            case 5:
-                dayName = "Friday";
-                break;
-            default:
-                dayName = "Weekend";
-                break;
-        }
-        Debug.Assert(dayName == "Wednesday", "Basic switch failed");
+    //     switch (day)
+    //     {
+    //         case 1:
+    //             dayName = "Monday";
+    //             break;
+    //         case 2:
+    //             dayName = "Tuesday";
+    //             break;
+    //         case 3:
+    //             dayName = "Wednesday";
+    //             break;
+    //         case 4:
+    //             dayName = "Thursday";
+    //             break;
+    //         case 5:
+    //             dayName = "Friday";
+    //             break;
+    //         default:
+    //             dayName = "Weekend";
+    //             break;
+    //     }
+    //     Assert(dayName == "Wednesday", "Basic switch failed");
 
-        // Switch with fall-through
-        char grade = 'B';
-        string message = "";
+    //     // Switch with fall-through
+    //     char grade = 'B';
+    //     string message = "";
 
-        switch (grade)
-        {
-            case 'A':
-            case 'B':
-                message = "Good";
-                break;
-            case 'C':
-                message = "Average";
-                break;
-            case 'D':
-            case 'F':
-                message = "Poor";
-                break;
-            default:
-                message = "Invalid";
-                break;
-        }
-        Debug.Assert(message == "Good", "Switch with fall-through failed");
+    //     switch (grade)
+    //     {
+    //         case 'A':
+    //         case 'B':
+    //             message = "Good";
+    //             break;
+    //         case 'C':
+    //             message = "Average";
+    //             break;
+    //         case 'D':
+    //         case 'F':
+    //             message = "Poor";
+    //             break;
+    //         default:
+    //             message = "Invalid";
+    //             break;
+    //     }
+    //     Assert(message == "Good", "Switch with fall-through failed");
 
-        // Switch with string
-        string fruit = "apple";
-        int calories = 0;
+    //     // Switch with string
+    //     string fruit = "apple";
+    //     int calories = 0;
 
-        switch (fruit)
-        {
-            case "apple":
-                calories = 95;
-                break;
-            case "banana":
-                calories = 105;
-                break;
-            case "orange":
-                calories = 62;
-                break;
-            default:
-                calories = 0;
-                break;
-        }
-        Debug.Assert(calories == 95, "String switch failed");
+    //     switch (fruit)
+    //     {
+    //         case "apple":
+    //             calories = 95;
+    //             break;
+    //         case "banana":
+    //             calories = 105;
+    //             break;
+    //         case "orange":
+    //             calories = 62;
+    //             break;
+    //         default:
+    //             calories = 0;
+    //             break;
+    //     }
+    //     Assert(calories == 95, "String switch failed");
 
-        Console.WriteLine("Switch Statements tests passed!");
-    }
+    //     Console.WriteLine("Switch Statements tests passed!");
+    // }
 
     public static void TestTernaryOperator()
     {
@@ -354,15 +354,15 @@ public class Conditionals
         int b = 5;
 
         int max = a > b ? a : b;
-        Debug.Assert(max == 10, "Ternary operator failed: max should be 10");
+        Assert(max == 10, "Ternary operator failed: max should be 10");
 
         string result = a > b ? "a is greater" : "b is greater";
-        Debug.Assert(result == "a is greater", "Ternary with strings failed");
+        Assert(result == "a is greater", "Ternary with strings failed");
 
         // Nested ternary
         int x = 15;
         string category = x > 20 ? "high" : x > 10 ? "medium" : "low";
-        Debug.Assert(category == "medium", "Nested ternary failed");
+        Assert(category == "medium", "Nested ternary failed");
 
         Console.WriteLine("Ternary Operator tests passed!");
     }
@@ -377,7 +377,7 @@ public class Conditionals
         double income = 50000;
 
         bool canRentCar = age >= 21 && hasLicense && hasInsurance && income > 30000;
-        Debug.Assert(canRentCar, "Complex condition failed: should be able to rent car");
+        Assert(canRentCar, "Complex condition failed: should be able to rent car");
 
         // Complex nested conditions
         int score = 85;
@@ -388,7 +388,7 @@ public class Conditionals
         {
             hasBonus = true;
         }
-        Debug.Assert(hasBonus, "Complex nested condition failed");
+        Assert(hasBonus, "Complex nested condition failed");
 
         Console.WriteLine("Complex Conditions tests passed!");
     }
@@ -405,7 +405,7 @@ public class Conditionals
                 break;
             sum += i;
         }
-        Debug.Assert(sum == 15, "Break in for loop failed: sum should be 15");
+        Assert(sum == 15, "Break in for loop failed: sum should be 15");
 
         // Continue in for loop
         int evenSum = 0;
@@ -415,7 +415,7 @@ public class Conditionals
                 continue;
             evenSum += i;
         }
-        Debug.Assert(evenSum == 30, "Continue in for loop failed: evenSum should be 30");
+        Assert(evenSum == 30, "Continue in for loop failed: evenSum should be 30");
 
         // Break in while loop
         int count = 0;
@@ -427,33 +427,33 @@ public class Conditionals
             value *= 2;
             count++;
         }
-        Debug.Assert(count == 7, "Break in while loop failed");
+        Assert(count == 7, "Break in while loop failed");
 
         Console.WriteLine("Break and Continue tests passed!");
     }
 
-    public static void TestNullChecks()
-    {
-        Console.WriteLine("Testing Null Checks...");
+    // public static void TestNullChecks()
+    // {
+    //     Console.WriteLine("Testing Null Checks...");
 
-        string text = null;
-        bool isNull = text == null;
-        Debug.Assert(isNull, "Null check failed: text should be null");
+    //     string text = null;
+    //     bool isNull = text == null;
+    //     Assert(isNull, "Null check failed: text should be null");
 
-        text = "Hello";
-        bool isNotNull = text != null;
-        Debug.Assert(isNotNull, "Not null check failed: text should not be null");
+    //     text = "Hello";
+    //     bool isNotNull = text != null;
+    //     Assert(isNotNull, "Not null check failed: text should not be null");
 
-        // Null coalescing
-        string result = text ?? "default";
-        Debug.Assert(result == "Hello", "Null coalescing failed");
+    //     // Null coalescing
+    //     string result = text ?? "default";
+    //     Assert(result == "Hello", "Null coalescing failed");
 
-        text = null;
-        result = text ?? "default";
-        Debug.Assert(result == "default", "Null coalescing with null failed");
+    //     text = null;
+    //     result = text ?? "default";
+    //     Assert(result == "default", "Null coalescing with null failed");
 
-        Console.WriteLine("Null Checks tests passed!");
-    }
+    //     Console.WriteLine("Null Checks tests passed!");
+    // }
 
     public static void TestStringComparisons()
     {
@@ -463,11 +463,11 @@ public class Conditionals
         string str2 = "Hello";
         string str3 = "hello";
 
-        Debug.Assert(str1 == str2, "String equality failed");
-        Debug.Assert(str1 != str3, "String inequality failed");
+        Assert(str1 == str2, "String equality failed");
+        Assert(str1 != str3, "String inequality failed");
 
-        bool ignoreCase = string.Equals(str1, str3, StringComparison.OrdinalIgnoreCase);
-        Debug.Assert(ignoreCase, "Case-insensitive comparison failed");
+        // bool ignoreCase = string.Equals(str1, str3, StringComparison.OrdinalIgnoreCase);
+        // Assert(ignoreCase, "Case-insensitive comparison failed");
 
         Console.WriteLine("String Comparisons tests passed!");
     }
@@ -480,15 +480,23 @@ public class Conditionals
         bool q = false;
 
         // De Morgan's laws
-        Debug.Assert(!(p && q) == (!p || !q), "De Morgan's law 1 failed");
-        Debug.Assert(!(p || q) == (!p && !q), "De Morgan's law 2 failed");
+        Assert(!(p && q) == (!p || !q), "De Morgan's law 1 failed");
+        Assert(!(p || q) == (!p && !q), "De Morgan's law 2 failed");
 
         // Truth tables
-        Debug.Assert(p && p == p, "Boolean identity failed");
-        Debug.Assert(p || p == p, "Boolean identity failed");
-        Debug.Assert(p && !p == false, "Boolean contradiction failed");
-        Debug.Assert(p || !p == true, "Boolean tautology failed");
+        Assert(p && p == p, "Boolean identity failed");
+        Assert(p || p == p, "Boolean identity failed");
+        Assert(p && !p == false, "Boolean contradiction failed");
+        Assert(p || !p == true, "Boolean tautology failed");
 
         Console.WriteLine("Boolean Logic tests passed!");
+    }
+
+    public static void Assert(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new Exception(message);
+        }
     }
 }

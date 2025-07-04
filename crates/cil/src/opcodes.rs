@@ -576,6 +576,7 @@ impl RawOpcode {
                 | Self::Bgt_Un_S { .. }
                 | Self::Ble_Un_S { .. }
                 | Self::Blt_Un_S { .. }
+                | Self::Switch { .. }
         )
     }
 

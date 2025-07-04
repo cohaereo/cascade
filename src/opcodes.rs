@@ -36,6 +36,9 @@ pub enum Opcode {
     /// Load a user string onto the stack
     LoadString(Token),
     LoadConstantI4(i32),
+    LoadConstantI8(i64),
+    LoadConstantR4(f32),
+    LoadConstantR8(f64),
 
     // Load/Store
     LoadArg(u16),
@@ -54,6 +57,9 @@ pub enum Opcode {
         offset: i32,
         comparison: Comparison,
         unsigned: bool,
+    },
+    Switch {
+        targets: Vec<i32>,
     },
 
     // Object manipulation
@@ -334,9 +340,9 @@ impl From<RawOpcode> for Opcode {
             RawOpcode::Ldc_I4_8 {} => Self::LoadConstantI4(8),
             RawOpcode::Ldc_I4_M1 {} => Self::LoadConstantI4(-1),
             RawOpcode::Ldc_I4_S { value } => Self::LoadConstantI4(value as i32),
-            // RawOpcode::Ldc_I8 { value } => todo!(),
-            // RawOpcode::Ldc_R4 { value } => todo!(),
-            // RawOpcode::Ldc_R8 { value } => todo!(),
+            RawOpcode::Ldc_I8 { value } => Self::LoadConstantI8(value),
+            RawOpcode::Ldc_R4 { value } => Self::LoadConstantR4(value),
+            RawOpcode::Ldc_R8 { value } => Self::LoadConstantR8(value),
             // RawOpcode::Leave { offset } => todo!(),
             // RawOpcode::Leave_S { offset } => todo!(),
             // RawOpcode::LocAlloc { size } => todo!(),
@@ -390,7 +396,7 @@ impl From<RawOpcode> for Opcode {
             RawOpcode::Sub {} => Self::Subtract(OverflowCheck::Off),
             RawOpcode::Sub_Ovf {} => Self::Subtract(OverflowCheck::Signed),
             RawOpcode::Sub_Ovf_Unsigned {} => Self::Subtract(OverflowCheck::Unsigned),
-            // RawOpcode::Switch { targets } => todo!(),
+            RawOpcode::Switch { targets } => Self::Switch { targets },
             // RawOpcode::Tail {} => todo!(),
             // RawOpcode::Throw {} => todo!(),
             // RawOpcode::Unaligned {} => todo!(),

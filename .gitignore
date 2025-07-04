@@ -4,3 +4,6 @@ rustc-ice-*.txt
 
 /target
 /target_ra
+
+*.exe
+/main.cpp

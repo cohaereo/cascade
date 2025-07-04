@@ -91,7 +91,12 @@ fn main() {
             let decompiler = MethodDecompiler::new(&image, method, bytecode, &locals);
 
             match decompiler.decompile() {
-                Ok(output) => println!("{}", output),
+                Ok(output) => {
+                    println!("{}", output);
+                    if method.name == "Main" {
+                        std::fs::write("main.cpp", output).expect("Failed to write main.cpp");
+                    }
+                }
                 Err(e) => eprintln!("Failed to decompile method: {}", e),
             }
         }
@@ -132,16 +137,18 @@ impl<'img> MethodDecompiler<'img> {
             )
         };
 
-        let label_offsets = bytecode
-            .iter()
-            .filter_map(|(offset, opcode)| {
-                if opcode.is_branch() {
-                    Some((*offset as i32 + opcode.branch_offset().unwrap()) as u32)
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let mut label_offsets = vec![];
+        for (offset, opcode) in bytecode.iter().filter(|(_, op)| op.is_branch()) {
+            if let RawOpcode::Switch { targets } = opcode {
+                label_offsets.extend(
+                    targets
+                        .iter()
+                        .map(|&target| (*offset as i32 + target + opcode.size() as i32) as u32),
+                );
+            } else {
+                label_offsets.push((*offset as i32 + opcode.branch_offset().unwrap()) as u32);
+            }
+        }
 
         Self {
             image,
@@ -197,9 +204,19 @@ impl<'img> MethodDecompiler<'img> {
             }
 
             let opcode = Opcode::from(raw_opcode.clone());
+            // writeln!(&mut output, "// IL_{:04x}: {opcode:?}", op_offset)?;
             match opcode {
                 Opcode::Nop {} => {}
                 Opcode::LoadConstantI4(value) => {
+                    self.stack.push(value.to_string());
+                }
+                Opcode::LoadConstantI8(value) => {
+                    self.stack.push(value.to_string());
+                }
+                Opcode::LoadConstantR4(value) => {
+                    self.stack.push(format!("{}f", value));
+                }
+                Opcode::LoadConstantR8(value) => {
                     self.stack.push(value.to_string());
                 }
                 Opcode::LoadLocal(index) => {
@@ -331,6 +348,20 @@ impl<'img> MethodDecompiler<'img> {
                         "    if ({expression}) goto IL_{:04x};",
                         *op_offset as i32 + raw_opcode.size() as i32 + offset
                     )?;
+                }
+                Opcode::Switch { targets } => {
+                    let mut cases = Vec::new();
+                    for target in targets {
+                        let target_offset = *op_offset as i32 + raw_opcode.size() as i32 + target;
+                        cases.push(format!("IL_{:04x}", target_offset));
+                    }
+                    let switch_expression = self.stack.pop()?;
+                    writeln!(&mut output, "    switch ({}) {{", switch_expression)?;
+                    for (i, case) in cases.iter().enumerate() {
+                        writeln!(&mut output, "        case {}: goto {}; break;", i, case)?;
+                    }
+                    writeln!(&mut output, "        default: break;")?;
+                    writeln!(&mut output, "    }}")?;
                 }
                 Opcode::ConvertToI1 => {
                     let top = self.stack.pop()?;
